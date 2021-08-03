@@ -114,3 +114,66 @@ public class OrderServiceImpl implements OrderService {
 - 이제 할인 정책을 변경해도, 애플리케이션의 구성 역할을 담당하는 AppConfig만 변경하면 된다. 클라이언트 코드인 OrderServiceImpl 를 포함해서 사용 영역의 어떤 코드도 변경할 필요가 없다.
 - 구성 영역은 당연히 변경된다. 구성 역할을 담당하는 AppConfig를 애플리케이션이라는 공연의 기획자로 생각하자. 공연 기획자는 공연 참여자인 구현 객체들을 모두 알아야 한다.
 - 이제부터 클라이언트 객체는 자신의 역할을 실행하는 것만 집중, 권한이 줄어듬(책임이 명확해짐)
+
+# 스프링 컨테이너 생성 
+- 
+```java
+//스프링 컨테이너 생성
+ApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
+```
+- ApplicationContext는 인터페이스이고, 스프링 컨테이너라 한다. 
+- 스프링 컨테이너는 애노테이션 기반의 자바 설정 클래스나, XML 기반으로 만들 수 있다. 
+
+## 스프링 컨테이너의 생성 과정 
+- 1. 스프링 컨테이너 생성 
+  + new AnnotationConfigApplicationContext(AppConfig.class)
+- 2. 스프링 빈 등록 
+  + @Bean으로 지정된 어노테이션을 찾아서 스프링 빈으로 등록한다. 
+  + ````
+       빈 이름         |  빈 객체 
+    memberService    | MemberServiceImpl@x01
+    orderService     | OrderServiceImpl@x02
+    memberRepository | MemoryMemberRepository@x03
+    discountPolicy   | RateDiscountPolicy@x04
+    ````
+- 3. 스프링 빈 의존관계 설정 
+  + 스프링 컨테이너는 설정 정보를 참고해서 의존관계를 주입한다. 
+  + ```
+    @Bean
+    public MemberService memberService() {
+      return new MemberServiceImpl(memberRepository()); 
+    }
+    ```
+
+# 스프링 빈 조회 - 상속 관계 
+- 부모 타입으로 조회하면, 자식 타입도 함께 조회할 수 있다. 
+- Object로 조회하면, 모든 스프링 빈을 조회할 수 있다. 
+
+# BeanFactory와 ApplicationContext 
+
+## BeanFactory
+- 스프링 컨테이너의 최상위 인터페이스 
+- 빈을 관리하고 조회하는 역할을 담당. `getBean()`
+
+## ApplicationContext
+- BeanFactory 기능을 모두 상속받아서 제공한다. 즉, BeanFactory + 편리한 부가 기능   
+- MessageSource. 국제화 기능
+- EnvironmentCapable. 환경 변수
+  + 로컬, 개발, 운영등을 구분해서 처리  
+- ApplicationEventPublisher. 애플리케이션 이벤트 
+  + 이벤트를 발행하고 구독하는 모델을 편리하게 지원 
+- ResourceLoader. 편리한 리소스 조회 
+  + 파일, 클래스패스, 외부 등에서 리소스를 편리하게 조회 
+  
+# 스프링 빈 설정 메타 정보 - BeanDefinition
+- 스프링 컨테이너는 다양한 형식의 빈 설정 정보를 받아드릴 수 있게 설계되어 있다. 자바코드, XML, Groovy 등
+  + 빈 하나가 하나의 메타정보라고 이해하면 됌. 
+- BeanDefinition으로 추상화 시켜놓고 ApplicationContext가 이를 가져다 쓰도록 되어있음. 스프링 컨테이너는 빈 정보가 자바 코드인지, XML인지 알 필요가 없다.
+- AnnotationConfigApplicationContext는 AnnotatedBeanDefinitionReader를 사용해서 AppConfig.class를 읽고 BeanDefinition을 생성한다.
+- GenericXmlApplicationContext는 XmlBeanDefinitionReader를 사용해서 appConfig.xml 설정 정보를 읽고 BeanDefinition을 생성한다.
+
+## BeanDefinition 정보 
+- beanDefinitionName = memberService beanDefinition = Root bean: class [null]; scope=; abstract=false; lazyInit=null; autowireMode=3; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=appConfig; factoryMethodName=memberService; initMethodName=null; destroyMethodName=(inferred); defined in hello.core.AppConfig
+
+## 정리 
+- 스프링은 빈의 설정 정보를 BeanDefinition으로 추상화해서 사용한다. 
