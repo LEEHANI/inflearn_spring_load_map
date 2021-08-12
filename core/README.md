@@ -223,3 +223,38 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
     ```
 - `@Configuration이 없고 @Bean만 있으면 스프링 빈으로 등록되지만, 싱글톤은 보장하지 않는다.` 
  
+
+# 컴포넌트 스캔
+
+## 컴포넌트 스캔과 의존관계 자동 주입하기 
+- 지금까지 스프링 빈을 등록할때, AppConfig에서 직접 빈 만들어서 등록을 해줬다. 
+- 이 방법은 스프링 빈이 많아지면 사용하기 어렵다. 그래서 자동으로 스프링 빈을 등록하는 `컴포넌트 스캔`이라는 기능을 제공한다.
+- 또 `@Autowired`로 의존관계도 자동으로 주입할 수 있다.    
+- 기존의 AppConfig와 다르게 @Bean으로 등록한 클래스가 없다. @Component로 등록함.
+
+## @ComponentScan 
+- @ComponentScan은 @Component가 붙은 모든 클래스를 스프링 빈으로 등록한다. 
+  + 스프링 빈의 기본 이름은 클래스명을 사용하되 맨 앞글자만 소문자를 사용한다. 
+  + MemberServiceImpl -> memberServiceImpl 
+- 보통 basePackages, basePackageClasses로 클래스 위치를 지정하지 않고, 설정 정보 클래스 위치를 프로젝트 최상단에 두어 전체를 스캔하도록 둔다.
+- 컴포넌트 스캔은 @Component 뿐만 아니라 다음 대상도 포함한다. 
+  + `@Component`: 컴포넌트 스캔에서 사용 
+  + `@Controller`: 스프링 MVC 컨트롤러에서 사용 
+  + `@Service`: 스프링 비즈니스 로직에서 사용. 추가기능 없음.  
+  + `@Repository`: 스프링 데이터 접근 계층에서 사용. 데이터 계층의 예외를 스프링 예외로 변환해줌  
+  + `@Configuration`: 스프링 설정 정보에서 사용. 스프링 빈이 싱글톤을 유지하도록 해줌    
+
+## @Autowired
+- 생성자에 `@Autowired`를 지정하면, 스프링 컨테이너가 자동으로 빈을 찾아서 주입한다. 
+  + ac.getBean(MemberRepository.class)
+
+## 필터 
+- `includeFilters`, 컴포넌트 스캔 대상 추가 
+- `excludeFilters`, 컴포넌트 스캔 대상 제외 
+
+## 빈 중복 등록과 충돌 
+- 자동 빈 등록 vs 자동 빈 등록 
+  + `ConflictingBeanDefinitionException` 예외 발생 
+- 자동 빈 등록 vs 수동 빈 등록 
+  + 스프링 -> 수동 빈이 오버라이딩된다.
+  + 스프링 부트 -> 에러남  
