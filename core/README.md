@@ -116,18 +116,17 @@ public class OrderServiceImpl implements OrderService {
 - 이제부터 클라이언트 객체는 자신의 역할을 실행하는 것만 집중, 권한이 줄어듬(책임이 명확해짐)
 
 # 스프링 컨테이너 생성 
-- 
-```java
+- ApplicationContext는 인터페이스이고, 스프링 컨테이너라 한다.
+```
 //스프링 컨테이너 생성
 ApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
 ```
-- ApplicationContext는 인터페이스이고, 스프링 컨테이너라 한다. 
 - 스프링 컨테이너는 애노테이션 기반의 자바 설정 클래스나, XML 기반으로 만들 수 있다. 
 
 ## 스프링 컨테이너의 생성 과정 
-- 1. 스프링 컨테이너 생성 
+1. `스프링 컨테이너 생성` 
   + new AnnotationConfigApplicationContext(AppConfig.class)
-- 2. 스프링 빈 등록 
+2. `스프링 빈 등록` 
   + @Bean으로 지정된 어노테이션을 찾아서 스프링 빈으로 등록한다. 
   + ````
        빈 이름         |  빈 객체 
@@ -136,7 +135,7 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
     memberRepository | MemoryMemberRepository@x03
     discountPolicy   | RateDiscountPolicy@x04
     ````
-- 3. 스프링 빈 의존관계 설정 
+3. `스프링 빈 의존관계 설정` 
   + 스프링 컨테이너는 설정 정보를 참고해서 의존관계를 주입한다. 
   + ```
     @Bean
@@ -153,10 +152,10 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 
 ## BeanFactory
 - 스프링 컨테이너의 최상위 인터페이스 
-- 빈을 관리하고 조회하는 역할을 담당. `getBean()`
+- 빈을 관리하고 조회하는 역할을 담당. `getBean()`으로 빈을 조회할 수 있음 
 
 ## ApplicationContext
-- BeanFactory 기능을 모두 상속받아서 제공한다. 즉, BeanFactory + 편리한 부가 기능   
+- BeanFactory 기능을 모두 상속받아서 제공한다. 즉, `BeanFactory + 편리한 부가 기능`   
 - MessageSource. 국제화 기능
 - EnvironmentCapable. 환경 변수
   + 로컬, 개발, 운영등을 구분해서 처리  
@@ -168,7 +167,7 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 # 스프링 빈 설정 메타 정보 - BeanDefinition
 - 스프링 컨테이너는 다양한 형식의 빈 설정 정보를 받아드릴 수 있게 설계되어 있다. 자바코드, XML, Groovy 등
   + 빈 하나가 하나의 메타정보라고 이해하면 됌. 
-- BeanDefinition으로 추상화 시켜놓고 ApplicationContext가 이를 가져다 쓰도록 되어있음. 스프링 컨테이너는 빈 정보가 자바 코드인지, XML인지 알 필요가 없다.
+- `BeanDefinition으로 추상화 시켜놓고 ApplicationContext가 이를 가져다 쓰도록 되어있음`. 스프링 컨테이너는 빈 정보가 자바 코드인지, XML인지 알 필요가 없다.
 - AnnotationConfigApplicationContext는 AnnotatedBeanDefinitionReader를 사용해서 AppConfig.class를 읽고 BeanDefinition을 생성한다.
 - GenericXmlApplicationContext는 XmlBeanDefinitionReader를 사용해서 appConfig.xml 설정 정보를 읽고 BeanDefinition을 생성한다.
 
@@ -184,7 +183,8 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 - 매번 새로 객체를 생성하는건 메모리 낭비가 심하므로 싱글톤 패턴으로 객체를 설계하는 게 좋다.  
 
 ## 싱글톤 패턴 
-- 애플리케이션 내에 클래스의 인스턴스가 딱 1개만 생성되는 디자인 패턴이다. `SingletonService`, `SingletonServiceTest`
+- 애플리케이션 내에 클래스의 인스턴스가 딱 1개만 생성되는 디자인 패턴이다. 
+- 예시) `SingletonService`, `SingletonServiceTest`
 
 ## 싱글톤 패턴 문제점 
 - 싱글톤 패턴을 구현하는 코드가 많이 필요함 
@@ -201,7 +201,7 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
   + DIP, OCP, 테스트, private 생성자로부터 자유롭게 싱글톤을 유지할 수 있다. 
 
 ## 싱글톤 방식의 주의점 
-- 여러 클라이언트에서 하나의 인스턴스를 공유하는 것이기 때문에 싱글톤 객체는 상태를 유자히게 설계하면 안된다. 
+- 여러 클라이언트에서 하나의 인스턴스를 공유하는 것이기 때문에 싱글톤 객체는 상태를 유지하게 설계하면 안된다. 
 - 무상태(stateless)로 설계해야함. 
   + 객체 내부에 클라이언트가 값을 변경할 수 있는 필드가 있으면 안됨. 
   + 객체 내부에 필드가 있다면 가급적 읽기만 가능해야함. 
@@ -258,3 +258,192 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 - 자동 빈 등록 vs 수동 빈 등록 
   + 스프링 -> 수동 빈이 오버라이딩된다.
   + 스프링 부트 -> 에러남  
+  
+  
+# 의존관계 자동 주입
+
+## 생성자 주입. 권장   
+- 생성자 호출시점에 딱 1번 호출되는 것이 보장된다. 
+- `불변, 필수` 의존관계에 사용
+  + 생성자는 웬만하면 인자값을 다 채워서 만드는게 관례이기 때문.  
+- 생성자가 딱 1개 있으면 @Autowired가 자동으로 주입되므로 생략할 수 있다.  
+
+## setter 주입 
+- `선택, 변경` 가능성이 있는 의존관계에 사용
+  + memberRepository가 빈으로 등록되어있지 않아도 @Autowired 사용 가능
+- ```java 
+  @Autowired(required = false)
+  public void setMemberRepository(MemberRepository memberRepository) {
+      this.memberRepository = memberRepository;
+  }
+  
+  @Autowired
+  public void setDiscountPolicy(DiscountPolicy discountPolicy) {
+    this.discountPolicy = discountPolicy;
+  }  
+  ``` 
+
+## 필드 주입. 사용x 
+- DI 프레임워크가 없으면 아무것도 할 수 없다. 
+  + 테스트 코드에서 필드 주입할 방법이 없다. 조작하려면 setter를 열어야하는데 그렇게되면 setter 주입을 사용하는게.... 
+- 스프링 설정을 목적으로 하는 @Configuration 같은 곳에서만 특별한 용도로 사용 
+  + ```java 
+    @Configuration 
+    public class AutoAppConfig {
+      @Autowired MemberRepository memberRepository; 
+  
+      @Bean
+      public MemberService memberService() {
+          return new MemberServiceImpl(memberRepository);
+      }
+    }
+    ```
+- @Bean에서 파라미터 의존관계는 자동 주입된다. 수동 등록시 자동 등록된 빈의 의존관계가 필요할 때, 필드 주입으로 받지 않아도 됌 
+  + ```java 
+    @Bean
+    public MemberService memberService(MemberRepositroy memberRepository) {
+      return new MemberServiceImpl(memberRepository);
+    }
+    ```
+       
+## 일반 메서드 주입. 사용x
+- 일반 메서드를 통해서 주입 받을 수 있다. 
+- 한번에 여러 필드를 주입 받을 수 있다. 거의 사용 안함.  
+
+## 옵션 처리 @Autowired
+- @Autowired(required = false): 파라미터가 빈이 아니면 메서드 자체가 호출안됌
+  + ```
+    //호출 안됨
+    @Autowired(required = false)
+    public void setNoBean1(Member member) {
+       System.out.println("setNoBean1 = " + member);
+    }
+    ```
+- org.springframework.lang.@Nullable: 자동 주입할 대상이 없으면 null이 입력
+  + ```
+    //null 호출
+    @Autowired
+    public void setNoBean2(@Nullable Member member) {
+       System.out.println("setNoBean2 = " + member);
+    }
+    ```
+- Optional<>: 자동 주입할 대상이 없으면 Optional.empty 입력
+  + ```
+    //Optional.empty 호출
+    @Autowired(required = false)
+    public void setNoBean3(Optional<Member> member) {
+       System.out.println("setNoBean3 = " + member);
+    }
+    ```
+
+
+## 조회 빈이 2개 이상일 때 
+### @Autowired
+- @Autowired 는 타입 매칭을 시도하고, 이때 여러 빈이 있으면 필드 이름, 파라미터 이름으로 빈 이름을 추가 매칭한다.
+  + ```
+    @Component
+    public class FixDiscountPolicy implements DiscountPolicy {
+       ... 
+    }
+    
+    @Component
+    public class RateDiscountPolicy implements DiscountPolicy {
+       ... 
+    }  
+    ```
+  +  ```
+     @Autowired
+     public OrderServiceImpl(MemberRepository memberRepository, DiscountPolicy rateDiscountPolicy) {
+         this.memberRepository = memberRepository;
+         this.discountPolicy = rateDiscountPolicy;
+     }
+     ```
+- 정리 
+  + 1. 타입 매칭 
+  + 2. 타입 매칭 결과가 2개 이상이면 필드 명, 파라미터 명으로 빈 이름 매칭
+   
+### @Qualifier
+- @Qualifier로 추가 구분자를 붙여준다.
+- @Qualifier("mainDiscountPolicy)를 못찾으면 어떻게 될까? mainDIscountPolicy라는 이름의 스프링 빈을 추가로 찾아본다. 여기서 못찾으면 예외 발생   
+   + ```
+     @Component
+     @Qualifier("mainDiscountPolicy)
+     public class FixDiscountPolicy implements DiscountPolicy {
+        ... 
+     }
+     
+     @Component
+     @Qualifier("fixDiscountPolicy)
+     public class RateDiscountPolicy implements DiscountPolicy {
+        ... 
+     }  
+     ```
+   +  ```
+      @Autowired
+      public OrderServiceImpl(MemberRepository memberRepository, @Qualifier("mainDiscountPolicy) DiscountPolicy rateDiscountPolicy) {
+          this.memberRepository = memberRepository;
+          this.discountPolicy = rateDiscountPolicy;
+      }
+      ```
+- 정리 
+  + 1. @Qualifier 끼리 매칭 
+  + 2. 빈 이름 매칭 
+  + 3. 없을시 NoSuchBeanDefinitioException 발생 
+
+### @Primary 사용 
+- @Autowired 시에 여러 빈이 매칭되면 @Primary가 우선 매칭된다.
+  + ```
+     @Component
+     @Primary
+     public class FixDiscountPolicy implements DiscountPolicy {
+        ... 
+     }
+     
+     @Component
+     public class RateDiscountPolicy implements DiscountPolicy {
+        ... 
+     }  
+    ```
+- ex) 메인이랑 서브디비 2가지가 있을 때, 메인에 @Primary를 써서 기본으로 두고, 서브를 사용할때 @Qualifier 사용하여 명시적으로 사용하도록  
+ 
+## 애노테이션 직접 만들기 
+- 매번 `@Qualifier("mainDiscountPolicy)`로 직접 작성하여 사용하면, 문자이기 때문에 컴파일시에 에러를 잡을 수 없다. 
+- 애노테이션으로 만들어서 사용하면 이 문제를 해결할 수 있음 `@MainDiscountPolicy` 
+- 코드 추적하기에 편리함. 
+- 이렇게 여러 애노테이션을 모아서 사용하는 기능은 스프링이 지원해주는 기능이다. 
+  + 뚜렷한 목적 없이 무분별하게 재정의하면 유지보수에 혼란이 가중될 수 있음. 
+ 
+## 조회한 빈이 모두 필요할 때. List, Map
+- @Autowired로 받을때 List, Map으로 받으면 하위 빈을 모두 조회할 수 있다. 만약 해당하는 타입의 스프링 빈이 없으면, 빈 컬렉션이나 Map을 주입한다.  
+  ```
+   @Autowired
+   public DiscountService(Map<String, DiscountPolicy> policyMap, List<DiscountPolicy> policies) {
+     this.policyMap = policyMap;
+     this.policies = policies;
+     System.out.println("policyMap = " + policyMap); 
+     System.out.println("policies = " + policies);
+     // policyMap = {fixDiscountPolicy=hello.core.discount.FixDiscountPolicy@3ecd267f, rateDiscountPolicy=hello.core.discount.RateDiscountPolicy@58ffcbd7}
+     // policies = [hello.core.discount.FixDiscountPolicy@3ecd267f, hello.core.discount.RateDiscountPolicy@58ffcbd7]
+   }
+  ```
+  
+## 자동, 수동의 올바른 실무 운영 기준 
+- 기본적으로 @ComponentScan을 활용하자. 
+- 기술 지원빈은 가급적 수동 빈 등록을 사용해 명확하게 드러내는 것이 좋다. 
+  + AOP, 데이터 베이스 연결, 공통 로그 처리 업무 등  
+- 비즈니스 로직 중에 다형성을 활용할 때, 특정 패키지에 같이 묶어두는 게 좋다.  
+  + ```
+    //의존 관계 자동 주입으로 DiscountPolicy와 관련된 빈들을 주입받아서 활용해야할 때
+    @Configuration
+    public class DiscountPolicyConfig {
+      @Bean
+      public DiscountPolicy rateDiscountPolicy() {
+        return new RateDiscountPolicy();
+      }
+    
+      @Bean
+      public DiscountPolicy fixDiscountPolicy() {
+        return new FixDiscountPolicy();
+      }
+    }
+    ``` 
