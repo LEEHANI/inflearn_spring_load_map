@@ -447,3 +447,19 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
       }
     }
     ``` 
+
+# 빈 생명주기 콜백 시작
+- 빈 라이프 사이클
+  + 객체 생성 -> 의존관계 주입
+- 스프링 빈의 이벤트 라이프사이클 
+  + 스프링 컨테이너 생성 -> 스프링 빈 생성 -> 의존관계 주입 -> 초기화 콜백 -> 사용 -> 소멸전 콜백 -> 스프링 종료 
+- 3가지의 방법으로 빈 생명주기 콜백을 지원함 
+  + 인터페이스(InitializingBean, DisposableBean) ==> 안쓰임 
+  + @Bean(initMethod = "init", destroyMethod = "close") 
+    - destroyMethod 기본 값이 (inferred)(추론)으로 되어있어서 close, shutdown이라는 이름의 메서드를 자동을 호출해줌. 따라서 직접 스프링 빈으로 등록하면 종료 메서드는 따로 적어주지 않아도 잘 동작한다
+  + @PostConstruct, @PreDestory 애노테이션     
+    - 스프링에 종속적인 기술이 아니라 자바 표준이므로 다른 컨테이너에서도 동작함. 
+    - 유일한 단점은 외부 라이브러리에는 적용하지 못한다는 것이다. 외부 라이브러리를 초기화, 종료 해야 하면 @Bean의 기능을 사용하자.
+- 정리 
+  + @PostConstruct, @PreDestory 애노테이션을 사용하자
+  + 코드를 고칠 수 없는 외부 라이브러리를 초기화, 종료해야 하면 @Bean 의 initMethod , destroyMethod를 사용하자.
