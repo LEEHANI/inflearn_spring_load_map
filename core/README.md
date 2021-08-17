@@ -81,24 +81,26 @@
   + 추상 클래스: DiscountPolicy
   + 구체 글래스: FixDiscountPolicy, RateDiscountPolicy  
 - 
-```java 
-  public class OrderServiceImpl implements OrderService {
-//  private final DiscountPolicy discountPolicy = new FixDiscountPolicy; 
-    private final DiscountPolicy discountPolicy = new RateDiscountPolicy;
-  }
-```
-- 여기서 정률 할인 정책으로 바꾸면, 클라이언트 코드를 수정해야 하므로 OCP도 위반하게됌
-  + OrderServiceImpl가 DiscountPolicy를 가져다 사용하는 입장이므로 클라이언트로 볼 수 있음.  
-- 즉, OrderServiceImpl는 DiscountPolicy의 인터페이스 뿐만 아니라 구체 클래스도 의존하고 있으므로 추상에만 의존하도록 변경해야함. => DIP 만족 
+    ```java 
+      public class OrderServiceImpl implements OrderService {
+    //  private final DiscountPolicy discountPolicy = new FixDiscountPolicy; 
+        private final DiscountPolicy discountPolicy = new RateDiscountPolicy;
+      }
+    ```
+- 여기서 정률 할인 정책으로 바꾸면, 클라이언트 코드를 수정해야 하므로 OCP도 위반.
+  + OrderServiceImpl가 DiscountPolicy를 가져다 사용하는 입장이므로 클라이언트라고 생각.  
+- OrderServiceImpl는 DiscountPolicy의 인터페이스 뿐만 아니라 구체 클래스도 의존하고 있으므로 추상에만 의존하도록 변경해보자. => DIP 만족 
 - 
-```java 
-public class OrderServiceImpl implements OrderService { 
-    private final DiscountPolicy discountPolicy;
-}
-```
+    ```java 
+    public class OrderServiceImpl implements OrderService { 
+  //  private final DiscountPolicy discountPolicy = new FixDiscountPolicy; 
+  //  private final DiscountPolicy discountPolicy = new RateDiscountPolicy;
+        private final DiscountPolicy discountPolicy;
+    }
+    ```
 - 하지만 구현체가 없으므로 NPE가 발생함. 이를 해결하기 위해서는 누군가가 DiscountPolicy 구현체를 넣어줘서 올바르게 동작할 수 있도록 해야함. 
 
-## 관심사의 분리. AppConfig 
+## 관심사의 분리가 필요함.  
 - 애플리케이션을 하나의 공연이라 생각해보자. 각각의 인터페이스는 배역이다. 인터페이스에 맞는 배역을 맡도록 배우를 지정해줘야 하는데.. 그 역할은 누가 하는가? 
 - 로미오와 줄리엣에서 누가 로미오를 할지, 누가 줄리엣을 할지는 배우들이 정하는게 아니라 다른 이가 지정을 해줘야 한다. 이전 코드는 마치 로미오 역할(인터페이스)을 하는 레오나르도 디카프리오(구현체, 배우)가 줄리엣 역할(인터페이스)을 하는 여자 주인공(구현체, 배우)을 직접 초빙하는 것과 같다. 디카프리오는 공연도 해야하고 동시에 여자 주인공도 공연에 직접 초빙해야 하는 다양한 책임을 가지고 있다.
 - 배우는 배역에만 집중해야한다. 공연을 구성하고, 담당 배우를 섭외하는 등의 역할을 하는 별도의 `공연 기획자`가 필요하다.
@@ -107,13 +109,49 @@ public class OrderServiceImpl implements OrderService {
 - 정리 
   + 공연 기획자: AppConfig 
   + 배역: OrderService, MemberRepository, DiscountPolicy
-  + 배우: OrderServliceImpl, MemoryMemberRepository, FixDiscountPolicy, RateDiscountPolicy
+  + 배우: OrderServiceImpl, MemoryMemberRepository, FixDiscountPolicy, RateDiscountPolicy
+  
+## AppConfig 
+- `구현 객체를 생성`하고, `생성자를 통해 연결`하는 책임을 가지는 별도의 설정 클래스를 만들자. 
+- ```
+  public class AppConfig { 
+    public MemberService memberService() {
+      return new MemberServiceImpl(new MemoryMemberRepository());
+    }
+  
+    public OrderService orderService() {
+      return new OrderServiceImpl(
+               new MemoryMemberRepository(), 
+               new RateDiscountPolicy());
+    }
+  }
+  ```
+- OrderServiceImpl은 이제부터 의존관계에 대한 고민은 외부에 맡기고 실행에만 집중하면 된다. 
   
 ## 정리 
 - AppConfig에서 `FixDiscountPolicy` -> `RateDiscountPolicy`로 새로운 할인 정책으로 변경했다.
 - 이제 할인 정책을 변경해도, 애플리케이션의 구성 역할을 담당하는 AppConfig만 변경하면 된다. 클라이언트 코드인 OrderServiceImpl 를 포함해서 사용 영역의 어떤 코드도 변경할 필요가 없다.
 - 구성 영역은 당연히 변경된다. 구성 역할을 담당하는 AppConfig를 애플리케이션이라는 공연의 기획자로 생각하자. 공연 기획자는 공연 참여자인 구현 객체들을 모두 알아야 한다.
 - 이제부터 클라이언트 객체는 자신의 역할을 실행하는 것만 집중, 권한이 줄어듬(책임이 명확해짐)
+
+# IoC, DI, 컨테이너 
+
+## IoC
+- 기존에는 클라이언트 스스로가 필요한 서버 구현체를 직접 생성하고, 연결하고, 실행했다. `private final DiscountPolicy discountPolicy = new FixDiscountPolicy`. 즉, 구현 객체가 프로그램의 제어 흐름을 스스로 조종했다. 
+- AppConfig 등장 이후로 구현 객체는 자신의 로직을 실행하는 역할만 담당한다. 프로그램의 제어 흐름은 AppConfig가 가져가고, 클라이언트는 어떤 서버 구현체가 실행되는지 모른다. 
+- 이렇듯 프로그램의 제어 흐름을 직접 하는게 아니라 외부에서 관리하는 것을 제어의 역전(IoC)이라 한다. 
+
+## DI 
+- 애플리케이션 실행 시점(런타임)에 구현 객체를 생성하고, 실제 의존관계가 연결되는 것을 의존관계 주입이라 한다. 
+- 의존관계 주입을 사용하면 클라이언트 코드를 변경하지 않고, 클라이언트가 호출하는 대상의 타입 인스턴스를 변경할 수 있다.
+
+## IoC 컨테이너, DI 컨테이너 
+- AppConfig 처럼 객체를 생성하고 관리하면서 의존관계를 연결해 주는 것을 IoC 컨테이너 또는 DI 컨테이너라 한다. 
+
+## 스프링 컨테이너 
+- ApplicationContext 를 스프링 컨테이너라 한다.
+- 기존에는 개발자가 AppConfig 를 사용해서 직접 객체를 생성하고 DI를 했지만, 이제부터는 스프링 컨테이너를 통해서 사용한다.
+- 이전에는 개발자가 필요한 객체를 AppConfig 를 사용해서 직접 조회했지만, 이제부터는 스프링 컨테이너를 통해서 필요한 스프링 빈(객체)를 찾아야 한다. 스프링 빈은 applicationContext.getBean() 메서드를 사용해서 찾을 수 있다.
 
 # 스프링 컨테이너 생성 
 - ApplicationContext는 인터페이스이고, 스프링 컨테이너라 한다.
@@ -463,3 +501,145 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
 - 정리 
   + @PostConstruct, @PreDestory 애노테이션을 사용하자
   + 코드를 고칠 수 없는 외부 라이브러리를 초기화, 종료해야 하면 @Bean 의 initMethod , destroyMethod를 사용하자.
+
+
+# 빈 스코프 
+- 싱글톤 스코프 
+- 프로토타입 스코프 
+- 웹 관련 스코프
+  + request: 웹 요청이 들어오고 나갈때 까지 유지되는 스코프이다.
+  + session: 웹 세션이 생성되고 종료될 때 까지 유지되는 스코프이다.
+  + application: 웹의 서블릿 컨텍스와 같은 범위로 유지되는 스코프이다.
+
+## 프로토타입 스코프 
+- 항상 새로운 인스턴스를 생성해서 반환한다. `PrototypeTest`
+- 스프링 컨테이너는 프로토타입 빈을 생성하고, 의존관계 주입, 초기화까지만 처리한다. 그 이후는 스프링 컨테이너가 관리해주지 않으므로, @PreDestory가 먹지 않음. 프로토타입 빈은 클라이언트에서 관리해야 한다.    
+
+## 프로토타입 스코프 - 싱글톤 내부에서 프로토타입 사용시 문제점 
+- 싱글톤 내부에서 프로토타입 사용시, 프로토타입이 아닌 싱글톤으로 동작하게 된다. 싱글톤 빈 생성시점에 의존관계를 이미 주입받기 때문이다. 주입 시점에 스프링 컨테이너에 요청해서 프로토타입 빈이 새로 생성이 된 것이지, 사용 할 때마다 새로 생성되는 것이 아니다!
+- ```
+  @Scope("singleton")
+  static class ClientBean {
+      private final PrototypeBean prototypeBean; //생성 시점에 주입됐으므로 싱글톤으로 동작.
+
+      @Autowired
+      public ClientBean(PrototypeBean prototypeBean) {
+          this.prototypeBean = prototypeBean;
+      }
+
+      public int logic() {
+          prototypeBean.addCount();
+          return prototypeBean.getCount();
+      }
+  }
+  ```
+
+## 프로토타입 스코프 - 싱글톤 내부에서 프로토타입 사용시 Provider로 문제 해결 
+- 프로토타입을 사용할 때마다 스프링 컨테이너에 새로 요청하기. `ac.getBean()`   
+  + ```
+    @Scope("singleton")
+    static class ClientBean {
+       @Autowired
+       private ApplicationContext ac;
+    
+       public int logic() {
+         PrototypeBean prototypeBean = ac.getBean(PrototypeBean.class);
+         prototypeBean.addCount();
+         int count = prototypeBean.getCount();
+         return count;
+       }
+     }
+    ```
+  + 의존 관계를 주입(DI) 받는게 아니라, 직접 필요한 의존관계를 찾는 법(DL, Dependency Lookup)이다. 
+  + 스프링 컨테이너에 종속적인 코드가 되고, 단위 테스트가 어려워지므로 비추천. 
+- ObjectFactory, `ObjectProvider`   
+  + ObjectProvider = ObjectFactory + 추가 편의 기능 
+  + ObjectProvider의 getObject()를 호출하면 내부에서는 스프링 컨테이너를 통해 해당 빈을 찾아서 반환한다(DL)
+  + 스프링이 제공하는 기능을 사용하지만, 기능이 단순하므로 단위테스트를 만들거나 mock 코드를 만들기는 훨씬 쉬워짐. 
+  + 스프링 컨테이너의 도움을 받지않고, new PrototypeBean으로 만들게되면 의존관계 주입도 안되고, 필요한 초기화도 안된다. 모든 것을 직접 수동으로 해줘야 한다.
+  + ```
+    @Scope("singleton")
+    static class ClientBean {
+      @Autowired
+      private final ObjectProvider<PrototypeBean> prototypeBean; 
+
+      public int logic() {
+          PrototypeBean prototypeBean = prototypeBean.getObject(); //항상 새로운 프로토타입 빈 생성 
+          prototypeBean.addCount();
+          return prototypeBean.getCount();
+      }
+    }
+    ```
+- JSR-330 javax.inject.Provider
+  + gradle 추가 필요. javax.inject:javax.inject:1
+  + get() 메서드 하나로 기능이 매우 단순하다.
+  + 별도의 라이브러리가 필요해다. 자바 표준이므로 스프링이 아닌 다른 컨테이너에서도 사용할 수 있다.  
+  + ```
+    @Scope("singleton")
+    static class ClientBean {
+      @Autowired
+      private final Provider<PrototypeBean> provider; 
+
+      public int logic() {
+          PrototypeBean prototypeBean = provider.get(); //항상 새로운 프로토타입 빈 생성 
+          prototypeBean.addCount();
+          return prototypeBean.getCount();
+      }
+    }
+    ```
+
+## request 스코프 
+- @Scope(value = "request")로 지정하면 이 빈은 `HTTP 요청 당 하나씩 생성되고, HTTP 요청이 끝나는 시점에 소멸`된다. 
+- 조심해야할건, 싱글톤 빈에서 request 스코프 빈을 주입받으면 에러가 발상한다. 
+  + ```
+    @Service 
+    public class LogDemoService {
+        private final MyLogger myLogger;
+        
+        @Autowired
+        public LogDemoController(MyLogger myLogger) {
+            this.myLogger = myLogger;
+        }
+        ...
+    }
+    ```
+- 싱글톤 빈은 스프링 애플리케이션 실행 시점에 생성되지만, request 스코프는 요청당 생성되므로 싱글톤 빈 생성시점에 주입받을 수 없다. 
+  + ObjectProvider로 ObjectProvider.getObject()를 호출하는 시점까지 request scope 빈의 생성을 지연할 수 있다.  
+  + ```
+      @Service 
+      public class LogDemoService {
+          @Autowired 
+          private final ObjectProvider<MyLogger> myLoggerProvider;
+          
+          public void logic(String id) {
+            MyLogger myLogger = myLoggerProvider.getObject();
+            myLogger.log("service id = " + id);
+          }
+      }
+      ```
+- ObjectProvider대신 프록시 방법으로도 해결할 수 있다. 
+  + ```
+    @Component
+    @Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS) //인터페이스면 INTERFACES 선택 
+    public class MyLogger {
+    }
+    ```
+  + MyLogger 클래스를 주입받아야 하는 곳에 가짜 프록시 클래스를 싱글톤 빈에 미리 주입해 두는 방식이다. 
+  + `myLogger = class hello.core.common.MyLogger$$EnhancerBySpringCGLIB$$b68b726d`
+  + 가짜 프록시 객체는 요청이 오면 그때 내부에서 진짜 빈을 요청하는 위임 로직이 들어있다. 
+- 사실 Provider를 사용하든, 프록시를 사용하든 핵심 아이디어는 진짜 객체 조회를 꼭 필요한 시점까지 지연처리 한다는 점이다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
