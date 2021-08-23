@@ -156,3 +156,119 @@
   String result = objectMapper.writerValueAsString(helloData);
   response.getWriter().writer(result);
   ```
+  
+# 서블릿으로 회원 관리 웹 애플리케이션 만들기 
+- [회원 등록](./src/main/java/hello/servlet/web/servlet/MemberSaveServlet.java)
+- [회원 목록](./src/main/java/hello/servlet/web/servlet/MemberListServlet.java)
+## 템플릿 엔진으로 
+- 서블릿 덕분에 동적인 HTML 문서를 만들 수 있었다. 정적인 HTML 문서라면 화면이 계속 달라지는 회원의 저장 결과라던가, 회원 목록 같은 동적인 HTML을 만드는 일은 불가능 할 것이다.
+  + ```
+    String username = request.getParameter("username");
+    int age = Integer.parseInt(request.getParameter("age"));
+
+    Member member = new Member(username, age);
+    memberRepository.save(member);
+
+    response.setContentType("text/html");
+    response.setCharacterEncoding("utf-8");
+    PrintWriter w = response.getWriter();
+    w.write("<html>\n" +
+            "<head>\n" +
+            " <meta charset=\"UTF-8\">\n" + "</head>\n" +
+            "<body>\n" +
+            "성공\n" +
+            "<ul>\n" +
+            " <li>id="+member.getId()+"</li>\n" +
+            " <li>username="+member.getUsername()+"</li>\n" +
+            " <li>age="+member.getAge()+"</li>\n" + "</ul>\n" +
+            "<a href=\"/index.html\">메인</a>\n" + "</body>\n" +
+            "</html>");
+    ``` 
+- `자바 코드에 HTML만드는 코드가 섞여있어서 매우 복잡하고 비효율적이다. 자바 코드로 HTML을 만드는 것보다 HTML 문서에 동적으로 변경해야 하는 부분만 자바 코드를 넣는게 더 편리할 것이다.` => JSP 등장
+- 이게 바로 템플릿 엔진이 나온 이유다. 템플릿 엔진을 사용하면 HTML 문서에서 필요한 곳만 코드를 적용해 동적으로 변경할 수 있다. 
+- 템플릿 엔진에는 JSP, Thymeleeaf, Freemarker, Velocity 등이 있다.
+
+# JSP로 회원 관리 웹 애플리케이션 만들기
+- `<%@ page contentType="text/html;charset=UTF-8" language="java" %>` 첫 줄은 JSP문서라는 뜻이다. JSP 문서는 이렇게 시작해야 한다.
+- 회원 등록 폼 JSP를 보면 첫 줄을 제외하고는 완전히 HTML와 똑같다. `JSP는 서버 내부에서 서블릿으로 변환`되는데, 우리가 만들었던 MemberFormServlet과 거의 비슷한 모습으로 변환된다.
+- `<% ~ %>` 태그 안에 자바 코드를 입력할 수 있다. 
+  + `<%= ~ %>` 자바 코드를 출력할 수 있다.
+- 회원 저장 JSP를 보면, 회원 저장 서블릿 코드와 같다. 다른 점이 있다면, HTML을 중심으로 하고, 자바 코드를 부분부분 입력해주었다. 
+## 서블릿과 JSP의 한계 
+- 서블릿으로 개발할 때는 뷰(View)화면을 위한 HTML을 만드는 작업이 자바 코드에 섞여서 지저분하고 복잡했다. JSP를 사용한 덕분에 뷰를 생성하는 HTML 작업을 깔끔하게 가져가고, 중간중간 동적으로 변경이 필요한 부분에만 자바 코드를 적용했다. 
+- 하지만 코드의 상위 절반은 회원을 저장하기 위한 비즈니스 로직이고, 나머지 하위 절반만 결과를 HTML로 보여주기 위한 뷰 영역이다. 
+- `JAVA 코드, 데이터를 조회하는 리포지토리 등등 다양한 코드가 모두 JSP에 노출되어 있다. JSP가 너무 많은 역할을 한다.`  
+
+# MVC 패턴 
+## 너무 많은 역할 
+- `하나의 서블릿이나 JSP만으로 비즈니스 로직과 뷰 렌더링까지 모두 처리하게 되면, 너무 많은 역할을 하게되고, 결과적으로 유지보수가 어려워진다.` 
+- 비즈니스 로직을 호출하는 부분에 변경이 발생해도 해당 코드를 손대야 하고, UI를 변경할 일이 있어도 비즈니스 로직이 함께 있는 해당 파일을 수정해야 한다.
+## 기능 특화 
+- 특히 JSP 같은 뷰 템플릿은 화면을 렌더링 하는데 최적화 되어 있기 때문에 이 부분의 업무만 담당하는 것이 가장 효과적이다.
+## Model View Controller 
+- 컨트롤러: HTTP 요청을 받아서 파라미터를 검증하고, 비즈니스 로직을 실행한다. 그리고 뷰에 전달할 결과 데이터를 조회해서 모델에 담는다.  
+- 모델: 뷰에 출력할 데이터를 담아둔다. 뷰가 필요한 데이터를 모두 모델에 담아서 전달해주는 덕분에 뷰는 비즈니스 로직이나 데이터 접근을 몰라도 되고, 화면을 렌더링 하는 일에 집중할 수 있다. 
+- 뷰: 모델에 담겨있는 데이터를 사용해서 화면을 그리는 일에 집중한다. 여기서는 HTML을 생성하는 부분을 말한다. 
+
+- ![MVC 패턴 이전](./images/noPattern.png)
+- ![MVC 1](./images/MVC1.png)
+- ![MVC 2](./images/MVC2.png)
+
+## MVC 패턴 적용
+- Model은 HttpServletRequest 객체를 사용한다. request는 내부에 데이터 저장소를 가지고 있는데, request.setAttribute(), reuqest.getAttribute()를 사용하면 데이터를 보관, 조회할 수 있다. 
+- `dispatcher.forward()`로 다른 서블릿이나 JSP로 이동할 수 있다. 서버 내부에서 다시 호출이 발생한다. 
+- `/WEB-INF` 안에 JSP가 있으면 외부에서 직접 JSP를 호출할 수 없다. 항상 컨트롤러를 통해서 호출해야한다. 
+  + localhost:8080/jsp/members.jsp. 가능  
+  + localhost:8080/WEB-INF/views/members.jsp. 불가능 
+- `redirect` vs `forward` 
+  + redirect
+    - 리다이렉트는 실제 웹 브라우저에 응답이 나갔다가, 클라이언트가 redirect 경로로 다시 요청하는 것. 따라서 클라이언트가 인지할 수 있고, URL 경로도 변경된다.
+    - 클라이언트 -> 서버 -> 클라이언트가 리다이렉트 호출 -> 서버   
+  + forward
+    - 포워드는 서버 내부에서 일어나는 호출이기 때문에 클라이언트가 전혀 인지하지 못한다.
+    - 클라이언트 -> 서버 -> 서버가 포워트 호출 
+- MVC 덕분에 컨트롤러 로직과 뷰 로직을 확실하게 분리할 수 있다. 이후 화면 수정이 발생하면 뷰 로직만 변경하면 된다. 
+  + 뷰
+    ```
+    <ul>
+        <li>id=${member.id}</li>
+        <li>username=${member.username}</li>
+        <li>age=${member.age}</li>
+    </ul>
+    ```
+  + ```
+    @Override
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        //servlet과 동일한 로
+        String username = request.getParameter("username");
+        int age = Integer.parseInt(request.getParameter("age"));
+
+        Member member = new Member(username, age);
+        memberRepository.save(member);
+
+        //Model에 데이터를 보관한다.
+        request.setAttribute("member", member);
+
+        String viewPath = "/WEB-INF/views/save-result.jsp";
+        RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+        dispatcher.forward(request, response);
+    }
+    ```
+
+# MVC 패턴 한계 
+- MVC 패턴을 적용한 덕분에 컨트롤러의 역할과 뷰를 렌더링 하는 역할을 명확하게 구분할 수 있다. 하지만 중복, 불필요한 코드가 많이 보인다. 
+## 포워드 중복
+- ```
+  RequestDispatcher dispatcher = request.getRequestDispatcher(viewPath);
+  dispatcher.forward(request, response);
+  ```
+## viewPath 중복
+- ```
+  String viewPath = "/WEB-INF/views/save-result.jsp";
+  ``` 
+- prefix: /WEB-INF/view/, suffix: .jsp 
+- 만약 jsp가 아닌 다른 템플릿 엔진으로 변경한다면 전체 코드를 다 변경해야한다. 
+## 공통 처리가 어렵다.   
+- 기능이 복잡해질 수 록 컨트롤러에서 공통으로 처리해야 하는 부분이 점점 더 많이 증가할 것이다. 단순히 공통 기능을 메서드로 뽑으면 될 것 같지만, 결과적으로 해당 메서드를 항상 호출해야 하고, 실수로 호출하지 않으면 문제가 될 것이다. 그리고 호출하는 것 자체도 중복이다.
+## 공통 처리가 어려우므로 프론트 컨트롤러 패턴을 도입
+- 프론트 컨트롤러 패턴을 도입하여 컨트롤러 호출 전에 공통 기능을 처리하면 중복이 사라진다.  
