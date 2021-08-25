@@ -654,3 +654,39 @@
   
 ## @RequestMapping
 - 현재 스프링에서 사용되는 방식은 애노테이션 기반 컨트롤러로 `RequestMappingHandlerMapping`, `RequestMappingHandlerAdapter` 방식을 사용한다.
+
+# 뷰 리졸버
+- OldController에 View를 사용할 수 있도록 코드 추가 return new ModelAndView("new-form")
+- http://localhost:8080/springmvc/old-controller 호출해보면, 컨트롤러는 호출됐지만 Whitelabel Error Page 오류가 발생한다. 
+- application.properties에 코드 추가 
+  + ```
+    spring.mvc.view.prefix=/WEB-INF/views/
+    spring.mvc.view.suffix=.jsp
+    ```
+## InternalResourceViewResolver
+- 스프링 부트는 InternalResourceViewResolver 라는 뷰 리졸버를 자동으로 등록하는데, 이때 application.properties 에 등록한 spring.mvc.view.prefix , spring.mvc.view.suffix 설정 정보를 사용해서 등록한다.
+
+## 스프링 부트가 자동 등록하는 뷰 리졸버 
+- ```
+  1 순위 BeanNameViewResolver : 빈 이름으로 뷰를 찾아서 반환한다. (예: 엑셀 파일 생성 기능에 사용)
+  2 순위 InternalResourceViewResolver : JSP를 처리할 수 있는 뷰를 반환한다.
+  ```
+## 동작 방식 
+1. 핸들러 어댑터 호출
+  - 핸들러 어댑터를 통해 new-form이라는 논리 뷰 이름을 획득한다
+2. ViewResolver 호출 
+  - new-form이라는 뷰 이름으로 viewResolver를 순서대로 호출한다. 
+  - 스프링 빈으로 등록된 뷰가 아니므로 pass되고, InternalResourceViewResolver 가 호출된다.
+3. InternalResourceViewResolver
+  - 이 뷰 리졸버는 InternalResourceView 를 반환한다. 
+4. 뷰 - InternalResourceView
+  - InternalResourceView 는 JSP처럼 포워드 forward() 를 호출해서 처리할 수 있는 경우에 사용한다. 
+5. view.render()
+  - view.render() 가 호출되고 InternalResourceView 는 forward() 를 사용해서 JSP를 실행한다.
+
+## 참고
+- InternalResourceViewResolver 는 만약 JSTL 라이브러리가 있으면 InternalResourceView 를 상속받은 JstlView 를 반환한다. JstlView 는 JSTL 태그 사용시 약간의 부가 기능이 추가된다.
+- 다른 뷰는 실제 뷰를 렌더링하지만, JSP의 경우 forward() 통해서 해당 JSP로 이동(실행)해야 렌더링이 된다. JSP를 제외한 나머지 뷰 템플릿들은 forward() 과정 없이 바로 렌더링 된다.
+- Thymeleaf 뷰 템플릿을 사용하면 ThymeleafViewResolver 를 등록해야 한다. 최근에는 라이브러리만 추가하면 스프링 부트가 이런 작업도 모두 자동화해준다.
+
+
