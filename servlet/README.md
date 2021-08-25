@@ -477,7 +477,7 @@
       }
   }
   ```
-- 이전에는 컨트롤러를 직접 매핑해서 사용했다. 그런데 이제는 어댑터를 사용하기 때문에, 컨트롤러 뿐만 아니라 어댑터가 지원하기만 하면, 어떤 것이라도 URL에 매핑해서 사용할 수 있다. 그래서 이름을 컨트롤러에서 더 넒은 범위의 핸들러로 변경했다.
+- 이전에는 컨트롤러를 직접 매핑해서 사용했다. `그런데 이제는 어댑터를 사용하기 때문에, 컨트롤러 뿐만 아니라 어댑터가 지원하기만 하면, 어떤 것이라도 URL에 매핑해서 사용할 수 있다. 그래서 이름을 컨트롤러에서 더 넒은 범위의 핸들러로 변경했다.` 
 - ```java
   @WebServlet(name = "frontControllerV5", urlPatterns = "/front-controller/v5/*")
   public class FrontControllerServletV5 extends HttpServlet {
@@ -591,8 +591,9 @@
 ## Spring MVC
 - ![SpringMVC 구조](./images/SpringMVC.png)
 - 동작 순서
-  1. 핸들러 조회: 핸들러 매핑을 통해 요청 URL에 매핑된 핸들러(컨트롤러)를 조회한다.
-  2. 핸들러 어댑터 조회: 핸들러를 실행할 수 있는 핸들러 어댑터를 조회한다.
+  1. 핸들러 조회: 핸들러 매핑을 통해 요청 URL에 매핑된 `핸들러(컨트롤러)`를 조회한다.
+    + 여기서 핸들러는 어떠한 것도 될 수 있다. 컨트롤러, 서블릿, HttpRequestHandler, AAA, BB 등..
+  2. 핸들러 어댑터 조회: 핸들러를 실행할 수 있는 `핸들러 어댑터`를 조회한다. 
   3. 핸들러 어댑터 실행: 핸들러 어댑터를 실행한다.
   4. 핸들러 실행: 핸들러 어댑터가 실제 핸들러를 실행한다.
   5. ModelAndView 반환: 핸들러 어댑터는 핸들러가 반환하는 정보를 ModelAndView로 변환해서 반환한다.
@@ -601,3 +602,55 @@
     + JSP의 경우 InternalResourceView(JstlView) 를 반환하는데, 내부에 forward() 로직이 있다.
   8. 뷰 렌더링: 뷰를 통해서 뷰를 렌더링한다.
 - 스프링 MVC의 큰 강점은 DispatcherServlet 코드의 변경 없이, 원하는 기능을 변경하거나 확장할 수 있다는 점이다. 지금까지 설명한 대부분을 확장 가능할 수 있게 인터페이스로 제공한다.
+
+# 핸들러 매핑과 핸들러 어댑터 
+- 핸들러 매핑과 핸들러 어댑터가 어떤 것들이 어떻게 사용되는지 알아보자. 
+- ```
+  public interface org.springframework.web.servlet.mvc.Controller {
+      ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse
+    response) throws Exception;
+  }
+  ```
+- Controller를 상속받아 사용해보자. Controller는 과거에 쓰였던 컨트롤러다.  
+- ```
+  @Component("/springmvc/old-controller")
+  public class OldController implements Controller {
+      @Override
+      public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+      System.out.println("OldController.handleRequest");
+          return null;
+      }
+  }
+  ```
+- http://localhost:8080/springmvc/old-controller. 빈의 이름으로 URL이 매핑됐다. 
+- 이 컨트롤러가 호출되려면 다음 2가지가 필요하다. 
+  + HandlerMapping
+    - 핸들러 매핑에서 이 컨트롤러(핸들러)를 찾을 수 있어야 한다.  
+  + HandlerAdapter
+    - 핸들러 매핑을 통해서 찾은 핸들러를 실행할 수 있는 핸들러 어댑터가 필요하다. 
+  
+## HandlerMapping
+- 0 순위 RequestMappingHandlerMapping : 애노테이션 기반의 컨트롤러인 @RequestMapping에서 사용
+- 1 순위 BeanNameUrlHandlerMapping : 스프링 빈 이름으로 핸들러를 찾는다 
+
+## HandlerAdapter
+- 0 순위 RequestMappingHandlerAdapter : 애노테이션 기반의 컨트롤러인 @RequestMapping에서 사용
+- 1 순위 HttpRequestHandlerAdapter : HttpRequestHandler 처리
+- 2 순위 SimpleControllerHandlerAdapter : Controller 인터페이스(애노테이션X, 과거에 사용) 처리
+
+## OldController 탐색하기 
+1. 핸들러 매핑으로 핸들러 조회
+  - HandlerMapping을 순서대로 실행해서, 핸들러를 찾는다. 
+  - 이 경우 빈 이름으로 핸들러를 찾아야 하기 때문에, BeanNameUrlHandlerMapping이 실행에 성공하고 핸들러인 OldController를 반환한다. (실제로는 Object type으로 받음) 
+2. 핸들러 어댑터 조회 
+  - HandlerAdapter의 supports()를 순서대로 호출한다. 
+  - SimpleControllerHandlerAdapter가 Controller 인터페이스를 지원하므로 대상이 된다. 
+3. 핸들러 어댑터 실행 
+  - 디스패처 서블릿이 조회한 SimpleControllerHandlerAdapter를 실행하면서 파라미터로 핸들러 정보를 넘겨준다. 
+  - SimpleControllerHandlerAdapter는 핸들러인 OldController를 내부에서 실행하고, 그 결과를 반환한다. 
+- 정리 - OldController 핸들러매핑, 어댑터 
+  + HandlerMapping - BeanNameUrlHandlerMapping
+  + HandlerAdapter - SimpleControllerHandlerAdapter 
+  
+## @RequestMapping
+- 현재 스프링에서 사용되는 방식은 애노테이션 기반 컨트롤러로 `RequestMappingHandlerMapping`, `RequestMappingHandlerAdapter` 방식을 사용한다.
