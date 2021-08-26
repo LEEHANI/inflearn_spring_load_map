@@ -1,4 +1,12 @@
 
+1. 웹 애플리케이션 이해
+2. [서블릿](#서블릿)
+3. [서블릿, JSP, MVC 패턴](#서블릿으로-회원-관리-웹-애플리케이션 만들기)
+4. [MVC 프레임워크 만들기](#MVC-프레임워크-만들기)
+5. [스프링 MVC - 구조 이해](#스프링-MVC)
+6. [스프링 MVC - 기본 기능](#스프링-MVC-시작하기) 
+7. 스프링MVC - 웹페이지만들기
+
 
 # HTML, HTTP API, CSR, SSR
 
@@ -157,9 +165,11 @@
   response.getWriter().writer(result);
   ```
   
+  
 # 서블릿으로 회원 관리 웹 애플리케이션 만들기 
 - [회원 등록](./src/main/java/hello/servlet/web/servlet/MemberSaveServlet.java)
 - [회원 목록](./src/main/java/hello/servlet/web/servlet/MemberListServlet.java)
+
 ## 템플릿 엔진으로 
 - 서블릿 덕분에 동적인 HTML 문서를 만들 수 있었다. 정적인 HTML 문서라면 화면이 계속 달라지는 회원의 저장 결과라던가, 회원 목록 같은 동적인 HTML을 만드는 일은 불가능 할 것이다.
   + ```
@@ -712,3 +722,11 @@
 - ModelAndView 
   + 모델과 뷰 정보를 담아서 반환하면 된다.
 - RequestMappingHandlerMapping 은 스프링 빈 중에서 @RequestMapping 또는 @Controller 가 클래스 레벨에 붙어 있는 경우에 매핑 정보로 인식한다.
+
+# 스프링 MVC - 컨트롤러 통합 
+- @RequestMapping은 메서드 단위에 적용할 수 있어서 컨트롤러 클래스를 유연하게 하나로 통합할 수 있다. 
+- [SpringMemberControllerV2](./src/main/java/hello/servlet/web/springmvc/v2/SpringMemberControllerV2.java)
+
+# 스프링 MVC - 실용적인 방식 
+- 실무에서 주로 사용하는 방식 
+- [SpringMemberControllerV3](./src/main/java/hello/servlet/web/springmvc/v3/SpringMemberControllerV3.java)
