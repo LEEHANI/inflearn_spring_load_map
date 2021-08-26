@@ -690,3 +690,25 @@
 - Thymeleaf 뷰 템플릿을 사용하면 ThymeleafViewResolver 를 등록해야 한다. 최근에는 라이브러리만 추가하면 스프링 부트가 이런 작업도 모두 자동화해준다.
 
 
+# 스프링 MVC 시작하기 
+## @RequestMapping 
+- 스프링은 애노테이션을 활용한 매우 유연하고, 실용적인 컨트롤러를 만들었는데 이것이 바로 @RequestMapping 애노테이션을 사용하는 컨트롤러이다.
+- 과거에는 스프링 프레임워크가 MVC 부분이 약해서 스프링을 사용하더라도 MVC 웹 기술은 스트럿츠 같은 다른 프레임워크를 사용했었다. 
+- 앞서 보았듯이 우선순위가 높은 핸들러 매핑과 핸들러 어댑터는 `RequestMappingHandlerMapping`, `RequestMappingHandlerAdapter`이다. 
+
+## @RequestMapping 적용 
+- ```
+  @Controller
+  public class SpringMemberFormControllerV1 {
+    @RequestMapping("/springmvc/v1/members/new-form") public ModelAndView process() {
+    return new ModelAndView("new-form"); }
+  }
+  ```
+- @Controller
+  + 내부에 @Component가 있어서 스프링이 자동으로 스프링 빈으로 등록한다. 
+  + 스프링 MVC에서 애노테이션 기반 컨트롤러로 인식한다. 
+- @RequestMapping 
+  + 요청 정보를 매핑한다. 해당 URL이 호출되면 이 메서드가 호출된다. 애노테이션을 기반으로 동작하기 때문에, 메서드의 이름은 임의로 지으면 된다.
+- ModelAndView 
+  + 모델과 뷰 정보를 담아서 반환하면 된다.
+- RequestMappingHandlerMapping 은 스프링 빈 중에서 @RequestMapping 또는 @Controller 가 클래스 레벨에 붙어 있는 경우에 매핑 정보로 인식한다.
