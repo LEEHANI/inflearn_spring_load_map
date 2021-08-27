@@ -1,4 +1,4 @@
-# 스프링 MVC 기본 기능 
+# 6. 스프링 MVC 기본 기능 
 ## 프로젝트 생성 
 - gradle, java 11, spring boot
 - packaging: `Jar`
@@ -72,3 +72,39 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 - `@PostMapping(value = "/mapping-consume", consumes = "application/json") `
 ## 미디어 타입 조건 매핑 - HTTP 요청 Accept. produce
 - `@PostMapping(value = "/mapping-produce", produces = "text/html") `
+
+# [요청 매핑 - API 예시](./src/main/java/hello/springmvc/basic/requestmapping/MappingClassController.java)
+- 회원 목록 조회: GET /users
+- 회원 등록: POST /users
+- 회원 조회: GET /users/{userId}
+- 회원수정: PATCH /users/{userId} 
+- 회원 삭제: DELETE /users/{userId}
+
+# HTTP 요청 - 기본, 헤더 조회
+- 스프링에서 HTTP 헤더 정보 조회 
+- HttpServletRequest request, HttpServletResponse response
+- HttpMethod httpMethod. HTTP method
+- java.util.Locale locale
+- @RequestHeader MultiValueMap<String, String> headerMap
+  + 모든 HTTP 헤더를 MultiValueMap 형식으로 조회한다.
+- @RequestHeader("host") String host,
+- @CookieValue(value = "myCookie", required = false) String cookie
+
+## MultiValueMap 
+- MAP과 유사한데, 하나의 키에 여러 값을 받을 수 있다. 
+- `keyA=value1&keyA=value2`
+- ```
+  MultiValueMap<String, String> map = new LinkedMultiValueMap(); map.add("keyA", "value1");
+  map.add("keyA", "value2");
+  //[value1,value2]
+  List<String> values = map.get("keyA");
+  ```
+
+## 참고
+- @Controller 의 사용 가능한 파라미터 목록은 다음 공식 메뉴얼에서 확인할 수 있다.
+  + request https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-arguments
+  + response https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-return-types
+
+
+
+  
