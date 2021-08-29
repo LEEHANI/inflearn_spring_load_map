@@ -108,12 +108,13 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 # HTTP 요청 파라미터 - 쿼리 파라미터, HTML Form
 - 리소스는 /resources/static 아래에 두면 스프링 부트가 자동으로 인식한다.
 - Jar 를 사용하면 webapp 경로를 사용할 수 없다. 이제부터 정적 리소스도 클래스 경로에 함께 포함해야한다.
-## 스프링이 제공하는 `@RequestParam` 을 사용하면 요청 파라미터를 매우 편리하게 사용할 수 있다.
+## HTTP 요청 파라미터 - @RequestParam
+### 스프링이 제공하는 `@RequestParam` 을 사용하면 요청 파라미터를 매우 편리하게 사용할 수 있다.
 - @RequestParam("username") String memberName
-## HTTP 파라미터 이름이 변수 이름과 같으면 @RequestParam(name="xx") 생략 가능  
+### HTTP 파라미터 이름이 변수 이름과 같으면 @RequestParam(name="xx") 생략 가능  
 - @RequestParam String username
 - @RequestParam 애노테이션을 생략하면 스프링 MVC는 내부에서 required=false 를 적용한다.
-## 파라미터 필수 여부 - @RequestParam(request = true) 
+### 파라미터 필수 여부 - @RequestParam(request = true) 
 - 기본값이 파라미터 필수이다. 
 - /request-param
   + username이 없으므로 `400 예외`가 발생함.
@@ -122,7 +123,19 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 - @RequestParam(required = false) int age, /request-param
   + `null을 int에 입력하는 것은 불가능하므로 500 예외 발생함.` 
   + Integer로 바꾸거나 defaultValue 사용 
-## 파라미터를 Map으로 조회하기 - @RequestParam Map<String, Object> paramMap    
+### 파라미터를 Map으로 조회하기 - @RequestParam Map<String, Object> paramMap    
 - 파라미터를 Map, MultiValueMap으로 조회할 수 있다 
 - @RequestParam Map
-- @ReuqestParam MultiValueMap. 파라미터 값이 여러 개일때 사용 
+- @ReuqestParam MultiValueMap. 파라미터 값이 여러 개일때 사용
+
+## HTTP 요청 파라미터 - @ModelAttribute 
+- 스프링MVC는 @ModelAttribute가 있으면 다음을 실행한다. 
+  + `HelloData` 객체를 생성한다. 
+  + 요청 파라미터의 이름으로 `HelloData` 객체의 프로퍼티를 찾는다. 
+  + 해당 프로퍼티의 setter를 호출해서 파라미터의 값을 바인딩한다. 조회하면 getter를 호출  
+    - 파라미터 이름이 username이면 setUsername() 메서드를 찾아서 값을 입력함 
+- age=abc 처럼 숫자가 들어가야 할 곳에 문자를 넣으면 `BindException`이 발생 
+- @ModelAttribute는 생략할 수 있다. 근데 @RequestParam도 생략할 수 있으니 혼란이 올 수 있다. 
+- 스프링은 해당 생략시 다음과 같은 규칙을 적용한다. 
+  + String , int , Integer 같은 단순 타입 = @RequestParam
+  + 나머지 = @ModelAttribute (argument resolver 로 지정해둔 타입 외)
