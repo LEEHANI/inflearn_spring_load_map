@@ -3,7 +3,7 @@
   + [쿼리 파라미터, HTML Form](#HTTP-요청-파라미터.-쿼리-파라미터,-HTML-Form)
   + HTTP message body
     + [단순 텍스트](#HTTP-요청-메시지.-단순-텍스트) 
-    + JSON
+    + [JSON](#http-요청-메시지-json)
 
 # 6. 스프링 MVC 기본 기능 
 ## 프로젝트 생성 
@@ -151,7 +151,7 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 # HTTP 요청 메시지. 단순 텍스트
 - HTTP message body에 담긴 데이터를 읽기. 주로 JSON 데이터. POST, PUT, PATCH 메서드. 
 - `요청 파라미터와 다르게, HTTP 메시지 바디를 통해 넘어오는 데이터는 @RequestParam, @ModelAttribute를 사용할 수 없다. (HTML Form 요청 제외)`
-## v1. HTTP 메시지 바디 데이터는 InputStream을 사용해 읽을 수 있다. 
+## v1. HTTP 메시지 바디 데이터는 HttpServletRequest에 InputStream을 사용해 읽을 수 있다. 
 - ```
   @PostMapping("/request-body-string-v1")
   public void requestBodyString(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -202,5 +202,77 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 ## 결론 
 - `요청 파라미터를 조회하는 기능: @RequestParam , @ModelAttribute`
 - `HTTP 메시지 바디를 직접 조회하는 기능: @RequestBody` 
+
+
+# HTTP 요청 메시지 JSON 
+## v1. HttpServletRequest, HttpServletResponse
+- HttpServletRequest를 사용해서 직접 HTTP 메시지 바디에서 데이터를 읽어와서 문자로 변환한다. 
+- 문자로된 JSON 데이터를 Jackson 라이브러리인 objectMapper를 사용해서 자바 객체로 변환한다. 
+- ```
+  @PostMapping("/request-body-json-v1")
+  public void requestBodyJsonV1(HttpServletRequest request, HttpServletResponse response) throws IOException {
+      ServletInputStream inputStream = request.getInputStream();
+      String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+      log.info("messageBody={}", messageBody);
+      HelloData helloData = objectMapper.readValue(messageBody, HelloData.class);
+      log.info("username={}, age={}", helloData.getUsername(), helloData.getAge());
+
+      response.getWriter().write("ok");
+  }
+  ```  
+## v2. @RequestBody 
+- 이전에 학습했던 @RequestBody를 사용해서 HTTP 메시지에서 데이터를 꺼내고 messageBody에 저장
+- 저장된 messageBody 데이터를 objectMapper를 통해서 자바 객체로 변환한다. 
+- ```
+  @PostMapping("/request-body-json-v2")
+  @ResponseBody
+  public String requestBodyJsonV2(@RequestBody String messageBody) throws IOException {
+      log.info("messageBody={}", messageBody);
+      HelloData helloData = objectMapper.readValue(messageBody, HelloData.class);
+      log.info("username={}, age={}", helloData.getUsername(), helloData.getAge());
+
+      return "ok";
+  }
+  ```
+
+## v3. @ResponseBody 객체 반환 
+- @ModelAttribute 처럼 한 번에 객체를 반환할 수는 없을까?
+- `HTTP 요청시에 content-type이 꼭 application/json 이어야한다.`
+- HttpMessageConverter가 동작하여 객체에 값을 넣어준다. 
+- `@ResponseBody를 생략하면 @ModelAttribute가 동작하기 때문에 생락하면 안된다.`
+  + String, int, Integer 같은 타입은 @RequestParam
+  + 나머지는 @ModelAttribute로 동작(argument resolver로 지정해둔 타입)  
+- ```
+  @PostMapping("/request-body-json-v3")
+  public String requestBodyJsonV3(@RequestBody HelloData data) {
+    log.info("username={}, age={}", data.getUsername(), data.getAge());
+    return "ok";
+  }
+  ```
+
+## v4. HttpEntity를 사용하여 바디값을 조회할 수도 있다.
+- httpEntity.getBody()
+
+## v5. @ResponseBody가 있는 반환 타입에 객체를 리턴할 수 있다.  
+```
+@PostMapping("/request-body-json-v5")
+@ResponseBody
+public HelloData requestBodyJsonV5(@RequestBody HelloData helloData) {
+    log.info("username={}, age={}", helloData.getUsername(), helloData.getAge());
+
+    return helloData;
+}
+```
+
+## 정리 
+- @RequestBody 요청
+  + JSON 요청 HTTP 메시지 컨버터 객체
+- @ResponseBody 응답
+  + 객체 HTTP 메시지 컨버터 JSON 응답
+
+
+
+
 
 
