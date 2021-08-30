@@ -1,3 +1,10 @@
+# 6. 스프링 MVC 기본 기능
+- HTTP 요청 
+  + [쿼리 파라미터, HTML Form](#HTTP-요청-파라미터.-쿼리-파라미터,-HTML-Form)
+  + HTTP message body
+    + [단순 텍스트](#HTTP-요청-메시지.-단순-텍스트) 
+    + JSON
+
 # 6. 스프링 MVC 기본 기능 
 ## 프로젝트 생성 
 - gradle, java 11, spring boot
@@ -105,7 +112,7 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
   + request https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-arguments
   + response https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-return-types
 
-# HTTP 요청 파라미터 - 쿼리 파라미터, HTML Form
+# HTTP 요청 파라미터. 쿼리 파라미터, HTML Form
 - 리소스는 /resources/static 아래에 두면 스프링 부트가 자동으로 인식한다.
 - Jar 를 사용하면 webapp 경로를 사용할 수 없다. 이제부터 정적 리소스도 클래스 경로에 함께 포함해야한다.
 ## HTTP 요청 파라미터 - @RequestParam
@@ -139,3 +146,61 @@ log.debug("data="+data)로 사용하면 안된다. "data="+data 문자 더하기
 - 스프링은 해당 생략시 다음과 같은 규칙을 적용한다. 
   + String , int , Integer 같은 단순 타입 = @RequestParam
   + 나머지 = @ModelAttribute (argument resolver 로 지정해둔 타입 외)
+  
+  
+# HTTP 요청 메시지. 단순 텍스트
+- HTTP message body에 담긴 데이터를 읽기. 주로 JSON 데이터. POST, PUT, PATCH 메서드. 
+- `요청 파라미터와 다르게, HTTP 메시지 바디를 통해 넘어오는 데이터는 @RequestParam, @ModelAttribute를 사용할 수 없다. (HTML Form 요청 제외)`
+## v1. HTTP 메시지 바디 데이터는 InputStream을 사용해 읽을 수 있다. 
+- ```
+  @PostMapping("/request-body-string-v1")
+  public void requestBodyString(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    ServletInputStream inputStream = request.getInputStream();
+    String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+    
+    log.info("messageBody={}", messageBody);
+    
+    response.getWriter().write("ok");
+  }
+  ```
+## v2. 스프링 MVC는 다음 파라미터를 지원한다. InputStream, OutputStream
+- `InputStream(Reader): HTTP 요청 메시지 바디의 내용을 직접 조회` 
+- `OutputStream(Writer): HTTP 응답 메시지의 바디에 직접 결과 출력` 
+- ```
+  @PostMapping("/request-body-string-v2")
+  public void requestBodyStringV2(InputStream inputStream, Writer reponseWirter) throws IOException {
+      String messageBody = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+
+      log.info("messageBody={}", messageBody);
+
+      reponseWirter.write("ok");
+  }
+  ```
+## v3. 스프링 MVC는 다음 파라미터를 지원한다. HttpEntity
+- HttpEntity: HTTP header, body 정보를 편리하게 조회 
+  + httpEntity.getBody(), httpEntity.getHeaders()
+  + 요청 파라미터 @RequestParam, @ModelAttribute와는 관계 없음 
+- HttpEntity는 응답에도 사용 가능
+  + 헤더 정보 포함 가능
+  + `view 조회 x`  
+- HttpEntity를 상속받은 RequestEntity, ResponseEntity도 있다. 
+  + RequestEntity
+    - HttpMethod, url 정보가 추가, 요청에서 사용
+  + ResponseEntity
+    - HTTP 상태 코드 설정 가능, 응답에서 사용
+    -  return new ResponseEntity<String>("Hello World", responseHeaders, HttpStatus.CREATED)
+    
+## v4. @RequestBody
+- `@RequestBody 를 사용하면 HTTP 메시지 바디 정보를 편리하게 조회할 수 있다.` 
+  + 참고로 헤더 정보가 필요하다면 HttpEntity 를 사용하거나 @RequestHeader 를 사용하면 된다.
+- 이렇게 메시지 바디를 직접 조회하는 기능은 요청 파라미터를 조회하는 @RequestParam , @ModelAttribute 와는 전혀 관계가 없다.
+
+## @ResponseBody
+- @ResponseBody 를 사용하면 응답 결과를 HTTP 메시지 바디에 직접 담아서 전달할 수 있다. 
+- 물론 이 경우에도 `view를 사용하지 않는다.`
+
+## 결론 
+- `요청 파라미터를 조회하는 기능: @RequestParam , @ModelAttribute`
+- `HTTP 메시지 바디를 직접 조회하는 기능: @RequestBody` 
+
+
