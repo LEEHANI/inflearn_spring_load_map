@@ -313,6 +313,12 @@ public HelloData requestBodyJsonV5(@RequestBody HelloData helloData) {
   spring.thymeleaf.suffix=.html
   ```
 
+# HTTP 응답 - HTTP API, 메시지 바디에 직접 입력 
+- HTML이 아니라 데이터를 HTTP 바디에 실어보낸다. 
+- HTML이나 뷰 템플릿을 사용해도 HTTP 응답 메시지 바디에 HTML 데이터가 담겨서 전달된다. 여기서 설명하는 내용은 정적 리소스나 뷰 템플릿을 거치지 않고, 직접 HTTP 응답 메시지를 전달하는 경우를 말한다.
+- ResponseEntity<>와 달리 `@ResponseBody 어노테이션을 사용하면 HTTP 응답 코드를 설정하기가 어려운데, @ResponseStatus(HttpStatus.OK) 어노테이션으로 이를 해결할 수 있다.`
+    
+
 
 
 
