@@ -2,7 +2,7 @@
 - HTTP 요청 
   + [쿼리 파라미터, HTML Form](#HTTP-요청-파라미터.-쿼리-파라미터,-HTML-Form)
   + HTTP message body
-    + [단순 텍스트](#HTTP-요청-메시지.-단순-텍스트) 
+    + [단순 텍스트](#HTTP-요청-메시지-단순-텍스트) 
     + [JSON](#http-요청-메시지-json)
 
 # 6. 스프링 MVC 기본 기능 
@@ -270,6 +270,53 @@ public HelloData requestBodyJsonV5(@RequestBody HelloData helloData) {
   + JSON 요청 HTTP 메시지 컨버터 객체
 - @ResponseBody 응답
   + 객체 HTTP 메시지 컨버터 JSON 응답
+
+
+# HTTP 응답 - 정적 리소스, 뷰 템플릿 
+- 정적 리소스
+  + 웹 브라우저에 정적인 HTML, css, js 등을 제공하는 `정적 리소스`
+- 뷰 템플릿 사용
+  + `웹 브라우저에 동적인 HTML을 제공`할 때는 뷰 템플릿 
+- HTTP 메시지 사용 
+  + HTTP 메시지 바디에 JSON 같은 형식으로 데이터를 전달 
+
+## 정적 리소스 
+- 스프링 부트는 클래스패스의 다음 디렉토리에 있는 정적 리소스를 제공한다. 
+  + `/static`, `/public`, `/resources`, `/META-INF/resources`
+- `src/main/resources 는 리소스를 보관하는 곳이고, 또 클래스패스의 시작 경로이다.` 따라서 다음 디렉토리에 리소스를 넣어두면 스프링 부트가 정적 리소스로 서비스를 제공한다. 
+- ex) http://localhost:8080/basic/hello-form.html
+
+## 뷰 템플릿
+- 뷰 템플릿을 거쳐서 HTML이 생성되고, 뷰가 응답을 만들어서 전달한다. 
+- `일반적으로 HTML을 동적으로 생성하는 용도로 사용`하지만, 다른 것들도 가능하다. 뷰 템플릿이 만들 수 있는 것이라면 뭐든지 가능하다.
+- 뷰 템플릿 경로 `src/main/resources/templates`
+
+### String을 반환화는 경우
+- ```
+  @RequestMapping("/response-view-v2")
+  public String responseViewV2(Model model) {
+      model.addAttribute("data", "hello!");
+      return "response/hello";
+  }
+  ```
+- @ResponseBody가 없으면, "response/hello"로 뷰 리졸버가 실행되어서 뷰를 찾고, 렌더링 한다.
+  + 뷰 템플릿 경로인 `src/main/resources/templates`에서 "response/hello"가 있는지 찾는다. 
+- @ResponseBody가 있으면, 뷰 리졸버를 실행하지 않고, HTTP 메시지 바디에 문자열이 들어간다. 
+### void를 반환하는 경우 (권장x)
+- @Controller 를 사용하고, HttpServletResponse , OutputStream(Writer) 같은 HTTP 메시지 바디를 처리하는 파라미터가 없으면 요청 URL을 참고해서 논리 뷰 이름으로 사용
+
+### Thymeleaf 스프링 부트 설정 
+- thymeleaf 의존성을 추가하면 스프링 부트가 자동으로 ThymeleafViewResolver와 필요한 스프링 빈들을 등록한다. 
+- 그리고 application.properties에 다음 설정도 반영해준다. 
+- ```
+  spring.thymeleaf.prefix=classpath:/templates/ 
+  spring.thymeleaf.suffix=.html
+  ```
+
+
+
+
+
 
 
 
