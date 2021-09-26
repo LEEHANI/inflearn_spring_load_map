@@ -154,3 +154,146 @@
 - Validator를 이용해 컨트롤러 호출시마다 검증
 
 
+# 5. 검증2 - Bean Validation
+```
+@Data
+public class Item {
+    
+    private Long id;
+    
+    @NotBlank
+    private String itemName;
+    
+    @NotNull
+    @Range(min = 1000, max = 1000000)
+    private Integer price;
+    
+    @NotNull
+    @Max(9999)
+    private Integer quantity;
+}
+```
+
+## Bean Validation이란?
+- Bean Validation은 특정한 구현체가 아니라 Bean Validation 2.0(JSR-380)이라는 `기술 표준`이다. 
+- 쉽게 이야기해서 검증 애노테이션과 여러 인터페이스의 모음이다. 마치 JPA가 표준 기술이고 그 구현체로 하이버네이트가 있는 것과 같다
+- 이름이 하이버네이트가 붙어서 그렇지 ORM과는 관련이 없다.
+
+# Bean Validation 시작 
+## 의존관계 추가 
+- `implementation 'org.springframework.boot:spring-boot-starter-validation'`
+## 검증 애노테이션 
+- @NotBlank : 빈값 + 공백만 있는 경우를 허용하지 않는다.
+- @NotNull : null 을 허용하지 않는다.
+- @Range(min = 1000, max = 1000000) : 범위 안의 값이어야 한다. 
+- @Max(9999) : 최대 9999까지만 허용한다.
+
+## 스프링 MVC는 어떻게 Bean Validator를 사용?
+- 스프링 부트가 spring-boot-starter-validation 라이브러리를 넣으면 자동으로 Bean Validator를 인지하고 스프링에 통합한다.
+- 스프링 부트는 자동으로 글로벌 Validator로 등록한다.
+- LocalValidatorFactoryBean 을 글로벌 Validator로 등록한다.
+- 글로벌 Validator가 적용되어 있기 때문에, `@Valid`, `@Validated` 만 적용하면 된다.
+- 검증 오류가 발생하면, FieldError , ObjectError 를 생성해서 `BindingResult` 에 담아준다.
+- 직접 글로벌 Validator를 직접 등록하면 스프링 부트는 Bean Validator를 글로벌 Validator 로 등록하지 않으므로 조심해야함. 
+
+## Valid ? Validated ?
+- 검증시 @Validated @Valid 둘다 사용가능하다.
+- @Validated 는 스프링 전용 검증 애노테이션이고 
+- @Valid 는 자바 표준 검증 애노테이션. 
+- 둘중 아무거나 사용해도 동일하게 작동하지만, `@Validated 는 내부에 groups 라는 기능을 포함하고 있다`
+
+## 검증 순서 
+1. @ModelAttribute 각각의 필드에 타입 변환 시도 
+   1. 성공하면 다음으로
+   2. 실패하면 typeMismatch 로 FieldError 추가 
+2. Validator 적용
+- `바인딩에 성공한 필드만 Bean Validation 적용` 
+- @ModelAttribute 각각의 필드 타입 변환시도 변환에 성공한 필드만 BeanValidation 적용
+
+# Bean Validation 에러 코드 
+- `typeMismatch`와 유사하게 NotBlank 라는 오류 코드를 기반으로 `MessageCodesResolver` 를 통해 다양한 메시지 코드가 순서대로 생성된다.
+- @NotBlank
+  + NotBlank.item.itemName 
+  + NotBlank.itemName 
+  + NotBlank.java.lang.String 
+  + NotBlank
+
+## BeanValidation 메시지 찾는 순서
+1. 생성된 메시지 코드 순서대로 messageSource 에서 메시지 찾기
+2. 애노테이션의 message 속성 사용 @NotBlank(message = "공백! {0}") 
+3. 라이브러리가 제공하는 기본 값 사용 공백일 수 없습니다.
+
+# Bean Validation - 오브젝트 오류. 권장X 
+- FieldError는 @NotBlank, @Range로 해결했다. 
+- ObjectError오류는 @ScriptAssert()를 사용하면 된다. 
+- ```
+  @Data
+  @ScriptAssert(lang = "javascript", script = "_this.price * _this.quantity >= 10000")
+  public class Item {
+  //...
+  }
+  ```
+- 실무에서는 검증 기능이 해당 객체의 범위를 넘어서는 경우들도 종종 등장하는데, 그런 경우 대응이 어렵다.
+- `오브젝트 오류 관련 부분만 직접 자바 코드로 작성하는 것을 권장한다.`
+- ```
+  if (item.getPrice() != null && item.getQuantity() != null) {
+    int resultPrice = item.getPrice() * item.getQuantity();
+  
+    if (resultPrice < 10000) {
+      bindingResult.reject("totalPriceMin", new Object[]{10000, resultPrice}, null);
+    }
+  }
+  ```
+
+# Bean Validation 한계
+- 등록할 때 Item 모델 객체 사용. 수정할 때도 Item 모델 객체 사용. 이때 등록과 수정시에 validation 요구 사항이 다르다면?
+- 동일한 모델 객체에서 조건을 다르게 적용할 수 없다.
+
+## 해결 방법
+- BeanValidation의 groups 기능을 사용. 권장 X 
+- `ItemSaveForm, ItemUpdateForm 같이 별도의 모델 객체를 만든다.` 
+
+## Bean Validation - groups 
+- 저장용 groups
+  + ```
+    public interface SaveCheck {}
+    ```
+- 수정용 groups
+  + ```
+    public interface UpdateCheck {}
+    ```
+- item에 적용 
+  + ```
+    @Data
+    public class Item {
+
+      @NotNull(groups = UpdateCheck.class)
+      private Long id;
+
+      @NotBlank(groups = {SaveCheck.class, UpdateCheck.class})
+      private String itemName;
+
+      @NotNull(groups = {SaveCheck.class, UpdateCheck.class})
+      @Range(min = 1000, max = 1000000)
+      private Integer price;
+
+      @NotNull(groups = {SaveCheck.class, UpdateCheck.class})
+      @Max(value = 9999, groups = {SaveCheck.class})
+      private Integer quantity;
+    }
+    ```
+- controller에 적용 
+  + ```
+    @PostMapping("/add")
+    public String addItemV2(@Validated(SaveCheck.class) @ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+      //...
+    }
+    ```
+- @Valid 에는 groups를 적용할 수 있는 기능이 없다. 따라서 groups를 사용하려면 @Validated 를 사용해야 한다.
+
+# Bean Validation - HTTP 메시지 컨버터 
+- @Valid , @Validated 는 HttpMessageConverter ( @RequestBody )에도 적용할 수 있다.
+## @ModelAttribute vs @RequestBody
+- @ModelAttribute 는 필드 단위로 정교하게 바인딩이 적용된다. 특정 필드가 바인딩 되지 않아도 나머지 필드는 정상 바인딩 되고, Validator를 사용한 검증도 적용할 수 있다.
+- @RequestBody 는 HttpMessageConverter 단계에서 JSON 데이터를 객체로 변경하지 못하면 이후 단계 자체가 진행되지 않고 예외가 발생한다. 컨트롤러도 호출되지 않고, Validator도 적용할 수 없다.
+
