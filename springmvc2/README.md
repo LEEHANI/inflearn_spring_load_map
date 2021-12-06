@@ -7,6 +7,6 @@
 6. [로그인 처리1 - 쿠키, 세션 - login-start](./login/README.md)
 7. [로그인 처리2 - 필터, 인터셉터 - login](./login/README.md) 
 8. [예외 처리와 오류 페이지 - exception](./exception/README.md)   
-9. API 예외 처리 - exception
+9. [API 예외 처리 - exception](./exception/README.md)   
 10. 스프링 타입 컨버터 - type-converter 
 11. 파일 업로드 - upload
